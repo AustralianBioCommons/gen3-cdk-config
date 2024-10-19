@@ -1,6 +1,6 @@
 {
   "name": "gen3-cdk-config",
-  "version": "0.1.4",
+  "version": "0.1.3",
   "bin": {
     "gen3-cdk-config": "bin/gen3-cdk-config.js"
   },
