@@ -28,6 +28,7 @@ jobs:
 
       - name: Run tests
         run: npm test
+
   # Step 2: Validate the version
   validate-version:
     runs-on: ubuntu-latest
@@ -40,6 +41,22 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Auto Bump Version (Patch)
+        run: |
+          git fetch origin main
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          PREVIOUS_VERSION=$(git show origin/main:package.json | node -p "require('./package.json').version")
+
+          echo "Current version: $CURRENT_VERSION"
+          echo "Previous version from main: $PREVIOUS_VERSION"
+
+          if [ "$CURRENT_VERSION" == "$PREVIOUS_VERSION" ]; then
+            echo "Version has not been updated. Bumping version..."
+            npm version patch
+          else
+            echo "Version is already updated."
+          fi
+
       - name: Get current version from package.json
         id: get_current_version
         run: |
@@ -49,11 +66,11 @@ jobs:
       - name: Validate Version
         id: validate_version
         run: |
-          # Fetch the tags from the repository
+          # Fetch the tags from the repository and main branch
           git fetch --tags
+          git fetch origin main
 
           # Load the current version from the environment
-          CURRENT_VERSION=$CURRENT_VERSION
           echo "Current version: $CURRENT_VERSION"
 
           # Check if the current version is a valid semantic version
@@ -74,8 +91,8 @@ jobs:
           echo "Version '$CURRENT_VERSION' is valid and unique."
 
           # Get the previous version from the main branch
-          git fetch origin main
           PREVIOUS_VERSION=$(git show origin/main:package.json | node -p "require('./package.json').version")
+          echo "Previous version from main: $PREVIOUS_VERSION"
 
           # Check if the version has been updated
           if [ "$CURRENT_VERSION" == "$PREVIOUS_VERSION" ]; then
@@ -88,7 +105,7 @@ jobs:
   # Step 3: Tag the release if version is valid
   tag-release:
     runs-on: ubuntu-latest
-    needs: validate-version  
+    needs: validate-version 
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
