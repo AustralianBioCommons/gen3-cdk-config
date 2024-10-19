@@ -1,4 +1,3 @@
-import * as cdk from 'aws-cdk-lib';
 import { Gen3CdkConfigStack } from '../lib/gen3-cdk-config-stack';
 import { App } from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';

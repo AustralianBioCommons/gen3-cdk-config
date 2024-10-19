@@ -7,7 +7,7 @@ on:
   pull_request:
     branches:
       - main
-    types: [opened, reopened]
+    types: [opened, reopened, synchronize]
 
 jobs:
   # Step 1: Build & Test
@@ -40,6 +40,11 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: '20'
+          
+      - name: Configure Git user
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
 
       - name: Auto Bump Version (Patch)
         run: |
