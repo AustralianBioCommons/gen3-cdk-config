@@ -1,15 +1,18 @@
-name: Release Version
+name: Release
 
 on:
   push:
     branches:
       - main
+  pull_request:
+    types:
+      - closed
 
 jobs:
-  release:
+  release-please:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Node.js
@@ -17,14 +20,9 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Bump version using standard-version
-        run: npx standard-version
+      - name: Release Please
+        uses: google-github-actions/release-please-action@v4
+        with:
+          release-type: node 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Push changes
-        run: |
-          git push --follow-tags origin main
