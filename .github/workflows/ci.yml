@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+    types: [opened, reopened]
+
+jobs:
+  # Step 1: Build & Test
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install 
+
+      - name: Run tests
+        run: npm test
+  # Step 2: Validate the version
+  validate-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '20'
+
+      - name: Get current version from package.json
+        id: get_current_version
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV
+
+      - name: Validate Version
+        id: validate_version
+        run: |
+          # Fetch the tags from the repository
+          git fetch --tags
+
+          # Load the current version from the environment
+          CURRENT_VERSION=$CURRENT_VERSION
+          echo "Current version: $CURRENT_VERSION"
+
+          # Check if the current version is a valid semantic version
+          if ! [[ "$CURRENT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Current version '$CURRENT_VERSION' is not a valid semantic version."
+            exit 1
+          fi
+
+          # Get all existing tags
+          EXISTING_TAGS=$(git tag)
+
+          # Check if the current version matches any existing tags
+          if echo "$EXISTING_TAGS" | grep -q "$CURRENT_VERSION"; then
+            echo "Error: Version '$CURRENT_VERSION' already exists in tags."
+            exit 1
+          fi
+
+          echo "Version '$CURRENT_VERSION' is valid and unique."
+
+          # Get the previous version from the main branch
+          git fetch origin main
+          PREVIOUS_VERSION=$(git show origin/main:package.json | node -p "require('./package.json').version")
+
+          # Check if the version has been updated
+          if [ "$CURRENT_VERSION" == "$PREVIOUS_VERSION" ]; then
+            echo "Error: Version has not been updated from '$PREVIOUS_VERSION'."
+            exit 1
+          fi
+
+          echo "Version '$CURRENT_VERSION' has been updated from '$PREVIOUS_VERSION' and is valid."
+
+  # Step 3: Tag the release if version is valid
+  tag-release:
+    runs-on: ubuntu-latest
+    needs: validate-version  
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '20'
+
+      - name: Get version from package.json
+        id: get_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Create tag
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git tag $VERSION
+          git push origin $VERSION
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

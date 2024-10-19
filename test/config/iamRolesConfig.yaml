@@ -1,0 +1,165 @@
+services:
+  test:
+    arborist:
+      - Effect: "Allow"
+        Action:
+          - "s3:ListAllMyBuckets"
+          - "s3:GetObject"
+        Resource: "arn:aws:s3:::fake-bucket-uat/*"
+    audit:
+      - Effect: "Allow"
+        Action:
+          - "sqs:SendMessage"
+          - "sqs:ReceiveMessage"
+        Resource: "arn:aws:sqs:us-east-1:123456789012:fake-queue-uat"
+      - Effect: "Allow"
+        Action:
+          - "sqs:DeleteMessage"
+          - "sqs:GetQueueAttributes"
+        Resource: "arn:aws:sqs:us-east-1:123456789012:fake-queue-uat"
+      - Effect: "Allow"
+        Action:
+          - "s3:PutObject"
+          - "s3:GetBucketAcl"
+        Resource: "arn:aws:s3:::fake-logs-uat/*"
+    fence:
+      - Effect: "Allow"
+        Action:
+          - "s3:DeleteBucket"
+        Resource: "arn:aws:s3:::fake-data-uat"
+    indexd:
+      - Effect: "Allow"
+        Action:
+          - "s3:PutObjectAcl"
+        Resource: "arn:aws:s3:::fake-index-data-uat/*"
+    peregrine:
+      - Effect: "Allow"
+        Action:
+          - "s3:ListObjectsV2"
+        Resource: "arn:aws:s3:::fake-peregrine-uat/*"
+    sheepdog:
+      - Effect: "Allow"
+        Action:
+          - "s3:PutBucketPolicy"
+        Resource: "arn:aws:s3:::fake-sheepdog-uat"
+    portal:
+      - Effect: "Allow"
+        Action:
+          - "s3:CreateBucket"
+        Resource: "arn:aws:s3:::fake-portal-uat"
+    metadata:
+      - Effect: "Allow"
+        Action:
+          - "es:ESHttpPost"
+          - "es:ESHttpGet"
+        Resource: "arn:aws:es:us-east-1:123456789012:domain/fake-metadata-uat/*"
+
+  staging:
+    arborist:
+      - Effect: "Allow"
+        Action:
+          - "s3:ListBucket"
+          - "s3:DeleteObject"
+        Resource: "arn:aws:s3:::fake-bucket-staging/*"
+    audit:
+      - Effect: "Allow"
+        Action:
+          - "sqs:SendMessage"
+          - "sqs:ReceiveMessage"
+        Resource: "arn:aws:sqs:us-east-1:123456789012:fake-queue-staging"
+      - Effect: "Allow"
+        Action:
+          - "sqs:DeleteMessage"
+          - "sqs:GetQueueAttributes"
+        Resource: "arn:aws:sqs:us-east-1:123456789012:fake-queue-staging"
+      - Effect: "Allow"
+        Action:
+          - "s3:GetObject"
+          - "s3:ListBucketVersions"
+        Resource: "arn:aws:s3:::fake-logs-staging/*"
+    fence:
+      - Effect: "Allow"
+        Action:
+          - "s3:GetBucketPolicy"
+        Resource: "arn:aws:s3:::fake-data-staging"
+    indexd:
+      - Effect: "Allow"
+        Action:
+          - "s3:PutObjectTagging"
+        Resource: "arn:aws:s3:::fake-index-data-staging/*"
+    peregrine:
+      - Effect: "Allow"
+        Action:
+          - "s3:ListObjects"
+        Resource: "arn:aws:s3:::fake-peregrine-staging/*"
+    sheepdog:
+      - Effect: "Allow"
+        Action:
+          - "s3:PutBucketLifecycleConfiguration"
+        Resource: "arn:aws:s3:::fake-sheepdog-staging"
+    portal:
+      - Effect: "Allow"
+        Action:
+          - "s3:DeleteBucket"
+        Resource: "arn:aws:s3:::fake-portal-staging"
+    metadata:
+      - Effect: "Allow"
+        Action:
+          - "es:ESHttpPost"
+          - "es:ESHttpGet"
+        Resource: "arn:aws:es:us-east-1:123456789012:domain/fake-metadata-staging/*"
+
+  prod:
+    arborist:
+      - Effect: "Allow"
+        Action:
+          - "s3:GetObjectVersion"
+          - "s3:RestoreObject"
+        Resource: "arn:aws:s3:::fake-bucket-prod/*"
+    audit:
+      - Effect: "Allow"
+        Action:
+          - "sqs:SendMessage"
+          - "sqs:ReceiveMessage"
+        Resource: "arn:aws:sqs:us-east-1:123456789012:fake-queue-prod"
+      - Effect: "Allow"
+        Action:
+          - "sqs:DeleteMessage"
+          - "sqs:GetQueueAttributes"
+        Resource: "arn:aws:sqs:us-east-1:123456789012:fake-queue-prod"
+      - Effect: "Allow"
+        Action:
+          - "s3:GetBucketLocation"
+          - "s3:ReplicateObject"
+        Resource: "arn:aws:s3:::fake-logs-prod/*"
+    fence:
+      - Effect: "Allow"
+        Action:
+          - "s3:GetBucketWebsite"
+        Resource: "arn:aws:s3:::fake-data-prod"
+    indexd:
+      - Effect: "Allow"
+        Action:
+          - "s3:DeleteBucketPolicy"
+        Resource: "arn:aws:s3:::fake-index-data-prod/*"
+    peregrine:
+      - Effect: "Allow"
+        Action:
+          - "s3:GetObjectTagging"
+        Resource: "arn:aws:s3:::fake-peregrine-prod/*"
+    sheepdog:
+      - Effect: "Allow"
+        Action:
+          - "s3:GetBucketPolicyStatus"
+        Resource: "arn:aws:s3:::fake-sheepdog-prod"
+    portal:
+      - Effect: "Allow"
+        Action:
+          - "s3:GetBucketAcl"
+        Resource: "arn:aws:s3:::fake-portal-prod"
+    metadata:
+      - Effect: "Allow"
+        Action:
+          - "es:ESHttpPost"
+          - "es:ESHttpGet"
+        Resource: "arn:aws:es:us-east-1:123456789012:domain/fake-metadata-prod/*"

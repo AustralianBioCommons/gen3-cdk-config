@@ -1,0 +1,86 @@
+{
+    "test": {
+      "name": "test",
+      "clusterName": "Gen3-Eks-test",
+      "aws": {
+        "account": "100000000001",
+        "region": "ap-southeast-2"
+      },
+      "platformRoleName": "Test_Gen3_AWS_Platform_Team",
+      "vpcId": "vpc-000000000001",
+      "namespace": "cad",
+      "clusterSubnets": [
+        "subnet-000000000001",
+        "subnet-000000000002",
+        "subnet-000000000003",
+        "subnet-000000000004",
+        "subnet-000000000005",
+        "subnet-000000000006"
+      ],
+      "nodeGroupSubnets": [
+        "subnet-000000000001",
+        "subnet-000000000002",
+        "subnet-000000000003"
+      ]
+    },
+    "staging": {
+      "name": "staging",
+      "clusterName": "Gen3-Eks-staging",
+      "aws": {
+        "account": "100000000002",
+        "region": "ap-southeast-2"
+      },
+      "platformRoleName": "Staging_Gen3_AWS_Platform_Team",
+      "vpcId": "vpc-000000000002",
+      "namespace": "cad",
+      "clusterSubnets": [
+        "subnet-000000000007",
+        "subnet-000000000008",
+        "subnet-000000000009",
+        "subnet-000000000010",
+        "subnet-000000000011",
+        "subnet-000000000012"
+      ],
+      "nodeGroupSubnets": [
+        "subnet-000000000007",
+        "subnet-000000000008",
+        "subnet-000000000009"
+      ]
+    },
+    "prod": {
+      "name": "prod",
+      "clusterName": "Gen3-Eks-prod",
+      "aws": {
+        "account": "100000000003",
+        "region": "ap-southeast-2"
+      },
+      "platformRoleName": "Prod_Gen3_AWS_Platform_Team",
+      "vpcId": "vpc-000000000003",
+      "namespace": "cad",
+      "clusterSubnets": [
+        "subnet-000000000013",
+        "subnet-000000000014",
+        "subnet-000000000015",
+        "subnet-000000000016",
+        "subnet-000000000017",
+        "subnet-000000000018"
+      ],
+      "nodeGroupSubnets": [
+        "subnet-000000000013",
+        "subnet-000000000014",
+        "subnet-000000000015"
+      ]
+    },
+    "tools": {
+      "name": "tools",
+      "aws": {
+        "account": "100000000004",
+        "region": "ap-southeast-2"
+      },
+      "platformRoleName": "Tools_Gen3_AWS_Platform_Team",
+      "vpcId": "",
+      "namespace": "",
+      "subnets": []
+    }
+  }
+  
