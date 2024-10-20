@@ -37,7 +37,7 @@ export class Gen3CdkConfigStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    // Determine the environment configuration paths
+    // Determine the configuration path
     const configDir = this.node.tryGetContext('configDir') || '../.secrets/config';
 
     // Load JSON configuration for Secrets Manager
