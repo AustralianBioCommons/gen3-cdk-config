@@ -6,24 +6,39 @@ import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
-import * as dotenv from 'dotenv';
 
-dotenv.config();
+
+interface IamRoleConfig {
+  serviceName: string;
+  policies: string[]; 
+}
 
 interface IamRolesConfig {
-  services: { [key: string]: { [key: string]: any[] } };
+  services: { [key: string]: { [key: string]: IamRoleConfig[] } };
+}
+
+interface ClusterConfigDetails {
+  version: string;
+  minSize: number;
+  maxSize: number;
+  desiredSize: number;
+  diskSize: number;
+  amiReleaseVersion: string;
+  instanceType: string;
+  tags: Record<string, string>;
 }
 
 interface ClusterConfig {
-  clusters: { [key: string]: { [key: string]: any } };
+  clusters: { [key: string]: ClusterConfigDetails };
 }
+
 
 export class Gen3CdkConfigStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    // Determine the environment configuration paths
-    const configDir = process.env.CONFIG_DIR || '../test/config';
+    // Determine the configuration path
+    const configDir = this.node.tryGetContext('configDir') || '../.secrets/config';
 
     // Load JSON configuration for Secrets Manager
     const jsonConfigPath = path.join(__dirname, `${configDir}/config.json`);

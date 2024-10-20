@@ -8,6 +8,7 @@ test('should create Secrets Manager secret and SSM parameters', () => {
     // Set context values for overwrite flags
     app.node.setContext('overwrite', ['secrets', 'roles', 'cluster']);
     app.node.setContext('environments', ['test', 'staging', 'prod']);
+    app.node.setContext('configDir', '../test/config');
 
     const stack = new Gen3CdkConfigStack(app, 'TestStack');
     
