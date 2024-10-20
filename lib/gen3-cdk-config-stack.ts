@@ -3,6 +3,8 @@ import { StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import { AwsCustomResource, AwsCustomResourcePolicy } from 'aws-cdk-lib/custom-resources';
+import * as cr from 'aws-cdk-lib/custom-resources';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
@@ -44,7 +46,7 @@ export class Gen3CdkConfigStack extends cdk.Stack {
     const jsonConfigPath = path.join(__dirname, `${configDir}/config.json`);
     const jsonConfig = JSON.parse(fs.readFileSync(jsonConfigPath, 'utf-8'));
 
-    const overwriteSecrets = this.node.tryGetContext('overwrite')?.includes('secrets');
+    const overwriteSecrets = this.node.tryGetContext('overwrite')?.includes('config');
 
     // Create or update the Secrets Manager secret for the configuration based on overwriteSecrets
     if (overwriteSecrets || !secretsmanager.Secret.fromSecretNameV2(this, 'Gen3ConfigSecret', 'gen3/config')) {
@@ -59,14 +61,15 @@ export class Gen3CdkConfigStack extends cdk.Stack {
     // Load IAM roles configuration from YAML file
     const yamlConfigPath = path.join(__dirname, `${configDir}/iamRolesConfig.yaml`);
     const rolesConfig: IamRolesConfig = yaml.parse(fs.readFileSync(yamlConfigPath, 'utf-8')) as IamRolesConfig;
+  
 
-    // Retrieve environments from context or default to 'dev' and 'prod'
-    const environments = this.node.tryGetContext('environments') || ['test', 'staging', 'prod'];
+    // Retrieve environments from context or default to 'test', 'staging' and 'prod'
+    const environments = this.node.tryGetContext('environments').split(',') || ['test', 'staging', 'prod'];
     const overwriteRoles = this.node.tryGetContext('overwrite')?.includes('roles');
 
     // Create SSM Parameter Store entries for each environment with YAML config
     for (const env of environments) {
-      this.createSsmParameter(`/gen3/${env}/iamRolesConfig`, JSON.stringify(rolesConfig.services[env]), env, overwriteRoles, 'iamRoles');
+      this.createSsmParameterWithCustomResource(`/gen3/${env}/iamRolesConfig`, JSON.stringify(rolesConfig.services[env]), overwriteRoles, 'iamRoles', env);
     }
 
     // Load Cluster configuration from YAML file
@@ -77,27 +80,32 @@ export class Gen3CdkConfigStack extends cdk.Stack {
     const overwriteCluster = this.node.tryGetContext('overwrite')?.includes('cluster');
 
     for (const env of environments) {
-      this.createSsmParameter(`/gen3/${env}/cluster-config`, JSON.stringify(clusterConfig.clusters[env]), env, overwriteCluster, 'clusterConfig');
+      this.createSsmParameterWithCustomResource(`/gen3/${env}/cluster-config`, JSON.stringify(clusterConfig.clusters[env]), overwriteCluster, 'clusterConfig', env);
     }
   }
 
-  private createSsmParameter(parameterName: string, value: string, environment: string, overwrite: boolean, type: string) {
-    const paramConstructId = `${type}${environment.charAt(0).toUpperCase()}`;
-    const ssmConstructId = `${type}SSM${environment.charAt(0).toUpperCase()}`;
+  private createSsmParameterWithCustomResource(parameterName: string, value: string, overwrite: boolean, type: string, env: string) {
+    const ssmConstructId = `${type}SSM${parameterName}${env}`;
+    console.log(`Creating SSM Parameter: ${parameterName} with value: ${value} (overwrite: ${overwrite})`); 
 
-    // Check if we need to create or update the SSM Parameter
-    const currentParameter = ssm.StringParameter.fromStringParameterAttributes(this, paramConstructId, {
-      parameterName
+    new AwsCustomResource(this, ssmConstructId, {
+      onUpdate: {
+        service: 'SSM',
+        action: 'putParameter',
+        parameters: {
+          Name: parameterName,
+          Value: value,
+          Type: 'String',
+          Overwrite: overwrite,
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(parameterName),
+      },
+      policy: AwsCustomResourcePolicy.fromStatements([
+        new cdk.aws_iam.PolicyStatement({
+          actions: ['ssm:PutParameter', 'ssm:GetParameter'],
+          resources: [`arn:aws:ssm:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:parameter${parameterName}`],
+        }),
+      ]),
     });
-
-    if (overwrite || !currentParameter) {
-      new ssm.StringParameter(this, ssmConstructId, {
-        parameterName,
-        stringValue: value,
-        tier: ssm.ParameterTier.ADVANCED,
-        dataType: ssm.ParameterDataType.TEXT,
-        description: `Configuration for ${parameterName.split('/').pop()}`,
-      }).applyRemovalPolicy(cdk.RemovalPolicy.RETAIN);
-    }
   }
 }
