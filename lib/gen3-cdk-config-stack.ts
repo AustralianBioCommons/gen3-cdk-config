@@ -1,103 +1,166 @@
 import * as cdk from 'aws-cdk-lib';
-import { StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import * as ssm from 'aws-cdk-lib/aws-ssm';
-import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as cr from 'aws-cdk-lib/custom-resources';
+import { AwsCustomResourcePolicy, AwsCustomResource } from 'aws-cdk-lib/custom-resources';
+import { Config, AwsConfig, IamRolesConfig, ClusterConfig } from './config-interfaces';
+import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 
-
-interface IamRoleConfig {
-  serviceName: string;
-  policies: string[]; 
-}
-
-interface IamRolesConfig {
-  services: { [key: string]: { [key: string]: IamRoleConfig[] } };
-}
-
-interface ClusterConfigDetails {
-  version: string;
-  minSize: number;
-  maxSize: number;
-  desiredSize: number;
-  diskSize: number;
-  amiReleaseVersion: string;
-  instanceType: string;
-  tags: Record<string, string>;
-}
-
-interface ClusterConfig {
-  clusters: { [key: string]: ClusterConfigDetails };
+interface Gen3CdkConfigStackProps extends cdk.StackProps {
+  eventBusName?: string,
+  eventRuleEnabled?: boolean,
+  env?: cdk.Environment
 }
 
 
 export class Gen3CdkConfigStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: StackProps) {
+  
+  private ssmClient: SSMClient;
+  private readonly gen3ConfigEventBus: events.EventBus;
+  private readonly eventRuleEnabled: boolean;
+
+  constructor(scope: Construct, id: string, props?: Gen3CdkConfigStackProps) {
     super(scope, id, props);
 
-    // Determine the configuration path
+    const region = props?.env?.region;
+    
+    this.ssmClient = new SSMClient({ region });
+
+    this.eventRuleEnabled = props?.eventRuleEnabled || true
+
     const configDir = this.node.tryGetContext('configDir') || '../.secrets/config';
 
-    // Load JSON configuration for Secrets Manager
+    // Load JSON configuration
     const jsonConfigPath = path.join(__dirname, `${configDir}/config.json`);
-    const jsonConfig = JSON.parse(fs.readFileSync(jsonConfigPath, 'utf-8'));
+    const jsonConfig = JSON.parse(fs.readFileSync(jsonConfigPath, 'utf-8')) as Config;
 
-    const overwriteSecrets = this.node.tryGetContext('overwrite')?.includes('secrets');
+    const overwriteConfig = this.node.tryGetContext('update')?.includes('config') || false;
 
-    // Create or update the Secrets Manager secret for the configuration based on overwriteSecrets
-    if (overwriteSecrets || !secretsmanager.Secret.fromSecretNameV2(this, 'Gen3ConfigSecret', 'gen3/config')) {
-      new secretsmanager.Secret(this, 'Gen3ConfigSecret', {
-        secretName: 'gen3/config',
-        secretStringValue: cdk.SecretValue.unsafePlainText(JSON.stringify(jsonConfig)),
-        // Safeguard against deletion
-        removalPolicy: cdk.RemovalPolicy.RETAIN,
-      });
-    }
+    const configParameterName = '/gen3/config';
 
-    // Load IAM roles configuration from YAML file
+    this.handleSsmParameter(configParameterName, JSON.stringify(jsonConfig), overwriteConfig, 'config', '');
+
+    // Load IAM roles configuration
     const yamlConfigPath = path.join(__dirname, `${configDir}/iamRolesConfig.yaml`);
-    const rolesConfig: IamRolesConfig = yaml.parse(fs.readFileSync(yamlConfigPath, 'utf-8')) as IamRolesConfig;
+    const rolesConfig = yaml.parse(fs.readFileSync(yamlConfigPath, 'utf-8')) as IamRolesConfig;
 
-    // Retrieve environments from context or default to 'dev' and 'prod'
-    const environments = this.node.tryGetContext('environments') || ['test', 'staging', 'prod'];
-    const overwriteRoles = this.node.tryGetContext('overwrite')?.includes('roles');
-
-    // Create SSM Parameter Store entries for each environment with YAML config
-    for (const env of environments) {
-      this.createSsmParameter(`/gen3/${env}/iamRolesConfig`, JSON.stringify(rolesConfig.services[env]), env, overwriteRoles, 'iamRoles');
+    let environments: string[];
+    try {
+      environments = this.node.tryGetContext('environments').split(',');
+    } catch (error) {
+      console.error("**** Caught a TypeError: Did you provide environments? ****");
+      throw error;
     }
 
-    // Load Cluster configuration from YAML file
+    const overwriteRoles = this.node.tryGetContext('update')?.includes('roles') || false;
+    environments.forEach(env => {
+      const parameterName = `/gen3/${env}/iamRolesConfig`;
+      this.handleSsmParameter(parameterName, JSON.stringify(rolesConfig.services[env]), overwriteRoles, 'iamRoles', env);
+    });
+
+    // Load Cluster configuration
     const clusterConfigPath = path.join(__dirname, `${configDir}/clusterConfig.yaml`);
-    const clusterConfig: ClusterConfig = yaml.parse(fs.readFileSync(clusterConfigPath, 'utf-8')) as ClusterConfig;
+    const clusterConfig = yaml.parse(fs.readFileSync(clusterConfigPath, 'utf-8')) as ClusterConfig;
 
-    // Create SSM Parameter Store entries for cluster configuration
-    const overwriteCluster = this.node.tryGetContext('overwrite')?.includes('cluster');
+    const overwriteCluster = this.node.tryGetContext('update')?.includes('cluster') || false;
+    environments.forEach(env => {
+      const parameterName = `/gen3/${env}/cluster-config`;
+      this.handleSsmParameter(parameterName, JSON.stringify(clusterConfig.clusters[env]), overwriteCluster, 'clusterConfig', env);
+    });
 
-    for (const env of environments) {
-      this.createSsmParameter(`/gen3/${env}/cluster-config`, JSON.stringify(clusterConfig.clusters[env]), env, overwriteCluster, 'clusterConfig');
+    // Create a custom Event Bus
+    this.gen3ConfigEventBus = new events.EventBus(this, 'Gen3ConfigEventBus', {
+      eventBusName: props?.eventBusName ||'gen3Config', 
+    });
+
+    // Create EventBridge rules for each environment
+    environments.forEach(envName => {
+      let env: AwsConfig;
+      try {
+        env = jsonConfig[envName].aws;
+      } catch (error) {
+        console.error(`Caught a TypeError: Environment: ${envName}`);
+        throw error;
+      }
+
+      // Create EventBridge rules for each SSM Parameter type,
+      // However, we don't want to do for global /gen3/config
+      this.createEventBridgeRuleForSSMChange(envName, env, 'cluster-config');
+      this.createEventBridgeRuleForSSMChange(envName, env, 'iamRolesConfig');
+    });
+    
+  }
+
+  private async parameterExists(parameterName: string): Promise<boolean> {
+    try {
+      const command = new GetParameterCommand({ Name: parameterName });
+      await this.ssmClient.send(command);
+      return true;
+    } catch (error) {
+      if (error instanceof Error && error.name === 'ParameterNotFound') {
+        return false;
+      }
+      throw error;
     }
   }
 
-  private createSsmParameter(parameterName: string, value: string, environment: string, overwrite: boolean, type: string) {
-    const paramConstructId = `${type}${environment.charAt(0).toUpperCase()}`;
-    const ssmConstructId = `${type}SSM${environment.charAt(0).toUpperCase()}`;
+  private async handleSsmParameter(parameterName: string, value: string, overwrite: boolean, type: string, env: string) {
+    const parameterExists = await this.parameterExists(parameterName);
+    if (!parameterExists || overwrite) {
+      this.updateSsmParameter(parameterName, value, overwrite, type, env);
+    } else {
+      console.log(`Skipping ${type} parameter deployment for ${parameterName}`);
+    }
+  }
+  
+  private updateSsmParameter(parameterName: string, value: string, overwrite: boolean, type: string, env: string) {
+    const ssmConstructId = `${type}SSM${parameterName}${env}`;
+    console.log(`${overwrite ? 'Updating' : 'Creating'} SSM Parameter: ${parameterName} with value: ${value}`);
 
-    // Check if we need to create or update the SSM Parameter
-    const currentParameter = ssm.StringParameter.fromStringParameterAttributes(this, paramConstructId, {
-      parameterName
+    new AwsCustomResource(this, ssmConstructId, {
+      onUpdate: {
+        service: 'SSM',
+        action: 'putParameter',
+        parameters: {
+          Name: parameterName,
+          Value: value,
+          Type: 'String',
+          Overwrite: overwrite,
+        },
+        physicalResourceId: cr.PhysicalResourceId.of(parameterName),
+      },
+      policy: AwsCustomResourcePolicy.fromStatements([
+        new iam.PolicyStatement({
+          actions: ['ssm:PutParameter', 'ssm:GetParameter'],
+          resources: [`arn:aws:ssm:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:parameter${parameterName}`],
+        }),
+      ]),
+    });
+  }
+
+  private createEventBridgeRuleForSSMChange(envName: string, env: AwsConfig, parameterPrefix: string) {
+    const ruleId = `${parameterPrefix}-${envName}-forwardingRule`;
+    const targetEventBusArn = `arn:aws:events:${env.region}:${env.account}:event-bus/${envName}-gen3-config-eventbus`;
+    
+    const rule = new events.Rule(this, ruleId, {
+      eventBus: this.gen3ConfigEventBus,
+      enabled: this.eventRuleEnabled,
+      eventPattern: {
+        source: ['aws.ssm'],
+        detailType: ['Parameter Store Change'],
+        detail: {
+          name: [`/gen3/${envName}/${parameterPrefix}`],
+        },
+      },
     });
 
-    if (overwrite || !currentParameter) {
-      new ssm.StringParameter(this, ssmConstructId, {
-        parameterName,
-        stringValue: value,
-        tier: ssm.ParameterTier.ADVANCED,
-        dataType: ssm.ParameterDataType.TEXT,
-        description: `Configuration for ${parameterName.split('/').pop()}`,
-      }).applyRemovalPolicy(cdk.RemovalPolicy.RETAIN);
-    }
+    rule.addTarget(new targets.EventBus(events.EventBus.fromEventBusArn(
+      this, `${ruleId}-event-target`, targetEventBusArn
+    )));
   }
 }

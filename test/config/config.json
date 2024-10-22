@@ -1,5 +1,5 @@
 {
-    "test": {
+    "ci_test": {
       "name": "test",
       "clusterName": "Gen3-Eks-test",
       "aws": {
@@ -23,7 +23,7 @@
         "subnet-000000000003"
       ]
     },
-    "staging": {
+    "ci_staging": {
       "name": "staging",
       "clusterName": "Gen3-Eks-staging",
       "aws": {
@@ -47,7 +47,7 @@
         "subnet-000000000009"
       ]
     },
-    "prod": {
+    "ci_prod": {
       "name": "prod",
       "clusterName": "Gen3-Eks-prod",
       "aws": {

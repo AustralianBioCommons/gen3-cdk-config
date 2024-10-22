@@ -1,6 +1,6 @@
 # Gen3 CDK Configuration Stack
 
-The `Gen3 Cdk Config Stack` is an AWS CDK stack designed to automate the creation and management of secrets in AWS Secrets Manager and entries in SSM Parameter Store for IAM roles and cluster configurations. It reads configuration settings from JSON and YAML files, making it easier to manage sensitive data and application settings across multiple environments. The stack provisions IAM roles for Gen3 services based on these configuration files, stores AWS platform settings (like VPC, subnets, and accounts) in the SSM Parameter Store, and also saves EKS cluster configurations in the Parameter Store.
+The `Gen3 CDK Config Stack` is an AWS CDK stack designed to automate the management and creation of configuration entries in the SSM Parameter Store for IAM roles and cluster configurations. By reading settings from JSON and YAML files, it simplifies the handling of sensitive configuration data and EKS cluster settings across multiple environments. This stack provisions IAM role configurations for Gen3 services based on these files, stores AWS platform settings such as VPCs, subnets, and account details in the SSM Parameter Store, and manages EKS cluster configurations in the same way.
 
 ## Table of Contents
 
@@ -35,3 +35,5 @@ gen3-cdk-config
 │   └── gen3-cdk-config-stack.ts
 
 ```
+## Usage Example
+`cdk ls --context environments=uat,staging,prod --context update=roles,config,cluster`
