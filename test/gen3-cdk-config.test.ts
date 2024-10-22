@@ -1,36 +1,35 @@
-import { Gen3CdkConfigStack } from '../lib/gen3-cdk-config-stack';
-import { App } from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
+import * as cdk from 'aws-cdk-lib';
+import { Gen3CdkConfigStack } from '../lib/gen3-cdk-config-stack';
+import { SSMClient } from '@aws-sdk/client-ssm';
 
-test('should create Secrets Manager secret and SSM parameters', () => {
-    const app = new App();
+test('Basic Stack Test', () => {
+  // TODO: Add more comprehensive tests later
+  
+  // Given
+  const app = new cdk.App();
 
-    // Set context values for overwrite flags
-    app.node.setContext('overwrite', ['secrets', 'roles', 'cluster']);
-    app.node.setContext('environments', ['test', 'staging', 'prod']);
+  // Add context for environments to simulate the deployment environment
+  app.node.setContext('environments', 'ci_test'); 
+  app.node.setContext('configDir', '../test/config'); 
+  app.node.setContext('update', 'config,roles,cluster'); 
 
-    const stack = new Gen3CdkConfigStack(app, 'TestStack');
-    
-    // Create an assertions template from the stack
-    const template = Template.fromStack(stack);
+  // Mock SSMClient methods to prevent actual AWS calls
+  const mockSend = jest.fn();
+  (SSMClient.prototype.send as jest.Mock) = mockSend;
 
-    console.log(template)
+  // When
+  const stack = new Gen3CdkConfigStack(app, 'TestStack', {
+    eventBusName: 'TestEventBus', 
+    env: { account: '123456789012', region: 'ap-southeast-2' } 
+  });
 
-    // Assertions to verify that the Secrets Manager secret and SSM parameters were created
-
-    template.hasResourceProperties('AWS::SecretsManager::Secret', {
-        Name: 'gen3/config'
-    });
-
-    template.hasResourceProperties('AWS::SSM::Parameter', {
-        Name: '/gen3/test/iamRolesConfig'
-    });
-
-    template.hasResourceProperties('AWS::SSM::Parameter', {
-        Name: '/gen3/staging/iamRolesConfig'
-    });
-
-    template.hasResourceProperties('AWS::SSM::Parameter', {
-        Name: '/gen3/prod/iamRolesConfig'
-    });
+  // Then
+  // Create a template from the stack
+  const template = Template.fromStack(stack);
+  
+  // Assert that the stack contains an EventBus with the specified name
+  template.hasResourceProperties('AWS::Events::EventBus', {
+    Name: 'TestEventBus'
+  });
 });

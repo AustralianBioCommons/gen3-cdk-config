@@ -1,5 +1,5 @@
 services:
-  test:
+  ci_test:
     arborist:
       - Effect: "Allow"
         Action:
@@ -54,7 +54,7 @@ services:
           - "es:ESHttpGet"
         Resource: "arn:aws:es:us-east-1:123456789012:domain/fake-metadata-uat/*"
 
-  staging:
+  ci_staging:
     arborist:
       - Effect: "Allow"
         Action:
@@ -109,7 +109,7 @@ services:
           - "es:ESHttpGet"
         Resource: "arn:aws:es:us-east-1:123456789012:domain/fake-metadata-staging/*"
 
-  prod:
+  ci_prod:
     arborist:
       - Effect: "Allow"
         Action:
