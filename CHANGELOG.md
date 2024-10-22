@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.0](https://github.com/AustralianBioCommons/gen3-cdk-config/compare/v1.0.1...v1.1.0) (2024-10-22)
+
+
+### Features
+
+* Event bridge, docs updates ([1e9aa88](https://github.com/AustralianBioCommons/gen3-cdk-config/commit/1e9aa881859127b739bb66450421e38925da79b7))
+* Event bus forwarding ([01fe491](https://github.com/AustralianBioCommons/gen3-cdk-config/commit/01fe491dde56153dddb036c6616e26e7a0821d0d))
+
 ## [1.0.1](https://github.com/AustralianBioCommons/gen3-cdk-config/compare/v1.0.0...v1.0.1) (2024-10-20)
 
 
