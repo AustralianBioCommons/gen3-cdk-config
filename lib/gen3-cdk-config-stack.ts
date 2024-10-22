@@ -1,6 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
@@ -17,6 +16,7 @@ interface Gen3CdkConfigStackProps extends cdk.StackProps {
   eventRuleEnabled?: boolean,
   env?: cdk.Environment
 }
+
 
 export class Gen3CdkConfigStack extends cdk.Stack {
   
@@ -110,18 +110,14 @@ export class Gen3CdkConfigStack extends cdk.Stack {
   }
 
   private async handleSsmParameter(parameterName: string, value: string, overwrite: boolean, type: string, env: string) {
-    try {
-      const parameterExists = await this.parameterExists(parameterName);
-      if (!parameterExists || overwrite) {
-        this.updateSsmParameter(parameterName, value, overwrite, type, env);
-      } else {
-        console.log(`Skipping ${type} parameter deployment for ${parameterName}`);
-      }
-    } catch (error) {
-      throw error;
+    const parameterExists = await this.parameterExists(parameterName);
+    if (!parameterExists || overwrite) {
+      this.updateSsmParameter(parameterName, value, overwrite, type, env);
+    } else {
+      console.log(`Skipping ${type} parameter deployment for ${parameterName}`);
     }
   }
-
+  
   private updateSsmParameter(parameterName: string, value: string, overwrite: boolean, type: string, env: string) {
     const ssmConstructId = `${type}SSM${parameterName}${env}`;
     console.log(`${overwrite ? 'Updating' : 'Creating'} SSM Parameter: ${parameterName} with value: ${value}`);

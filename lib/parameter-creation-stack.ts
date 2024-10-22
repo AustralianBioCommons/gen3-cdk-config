@@ -2,10 +2,9 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 
-interface Gen3BlankParamsStackProps extends cdk.StackProps {}
 
 export class Gen3BlankParamsStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: Gen3BlankParamsStackProps) {
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
     let envName: string[];
