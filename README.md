@@ -35,3 +35,5 @@ gen3-cdk-config
 │   └── gen3-cdk-config-stack.ts
 
 ```
+## Usage Example
+`cdk ls --context environments=uat,staging,prod --context update=roles,config,cluster`
