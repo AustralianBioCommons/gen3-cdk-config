@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/AustralianBioCommons/gen3-cdk-config/compare/v1.1.0...v1.1.1) (2024-10-23)
+
+
+### Bug Fixes
+
+* updated documentation ([ebc7091](https://github.com/AustralianBioCommons/gen3-cdk-config/commit/ebc70915f957202f7ccd28a2742aca65ea35d1a8))
+
 ## [1.1.0](https://github.com/AustralianBioCommons/gen3-cdk-config/compare/v1.0.1...v1.1.0) (2024-10-22)
 
 
