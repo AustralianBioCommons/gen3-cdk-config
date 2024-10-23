@@ -2,6 +2,8 @@
 
 This project is designed to configure and manage Gen3 EKS environments using AWS CDK. The stack is deployed in a **dedicated tools/management account** and handles the creation and management of SSM Parameter Stores for multiple Gen3 environments. These environments include configurations for IAM roles, EKS clusters, and other infrastructure settings.
 
+Please note: This project is designed for [**GEN3 EKS Blueprint Codepiline**](https://github.com/AustralianBioCommons/gen3-eks-pipeline) to consume these configurations.
+
 ## Key Features
 
 - **Automated SSM Parameter Management**: Automatically creates and updates SSM parameters for IAM roles, cluster configurations, and environment configurations.
@@ -9,9 +11,19 @@ This project is designed to configure and manage Gen3 EKS environments using AWS
 - **Multi-environment Support**: Supports multiple Gen3 environments (e.g., `uat`, `staging`, `prod`) with customizable configuration files.
 - **Reusability**: Environment-specific settings can be reused and customized for different Gen3 environments.
 
+## Solution Architecture
+Below is the architecture diagram representing how the components interact: 
+
+![Solution Architecture](./docs/images/solution-architecture.webp)
+- **Event Bus**: Captures changes to Parameter Store values.
+- **Lambda**: Triggers on Event Bus events and updates the CloudFormation stack.
+- **SSM Parameter Store**: Stores configuration values like IAM role config and cluster config.
+
+
 ## Prerequisites
 
-Ensure you have AWS CDK v2 installed and configured to deploy to your **dedicated tools/management account**. This stack is not designed for workload accounts deployment.
+Ensure you have AWS CDK v2 installed and configured to deploy to your **dedicated tools/management account**. This stack is not designed for workload accounts deployment, see architecture diagram above.
+
 
 ## Table of Contents
 
