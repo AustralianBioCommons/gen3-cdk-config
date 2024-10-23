@@ -1,6 +1,10 @@
 {
   "name": "gen3-cdk-config",
   "version": "1.1.3",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AustralianBioCommons/gen3-cdk-config.git"
+  },
   "bin": {
     "gen3-cdk-config": "bin/gen3-cdk-config.js"
   },
