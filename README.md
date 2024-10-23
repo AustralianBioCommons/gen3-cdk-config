@@ -2,7 +2,7 @@
 
 This project is designed to configure and manage Gen3 EKS environments using AWS CDK. The stack is deployed in a **dedicated tools/management account** and handles the creation and management of SSM Parameter Stores for multiple Gen3 environments. These environments include configurations for IAM roles, EKS clusters, and other infrastructure settings.
 
-Please note: This project is designed for [**GEN3 EKS Blueprint Codepiline**](https://github.com/AustralianBioCommons/gen3-eks-pipeline) to consume these configurations.
+Please note: This project is designed for [**GEN3 EKS Blueprint Codepipeline**](https://github.com/AustralianBioCommons/gen3-eks-pipeline) to consume these configurations.
 
 ## Key Features
 
@@ -103,6 +103,14 @@ The stack uses three primary configuration files:
 
 Usage
 -----
+**Clone the Repository**
+
+        git clone git@github.com:AustralianBioCommons/gen3-cdk-config.git
+        cd gen3-cdk-config
+
+**Installing Dependencies**
+
+        npm install
 
 ### Deploying the Stack
 
