@@ -21,7 +21,7 @@ jobs:
           node-version: '20'
 
       - name: Release Please
-        uses: google-github-actions/release-please-action@v4
+        uses: oogleapis/release-please-action@v4
         with:
           release-type: node 
         env:
