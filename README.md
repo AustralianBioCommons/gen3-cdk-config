@@ -42,11 +42,10 @@ Ensure you have AWS CDK v2 installed and configured to deploy to your **dedicate
 
 - [Overview](#overview)
 - [Folder Structure](#folder-structure)
-- [Installation](#installation)
 - [Configuration Files](#configuration-files)
 - [Usage](#usage)
-- [Examples](#examples)
-- [License](#license)
+- [EventBus Forwarding](#eventbus-forwarding)
+
 
 ## Overview
 
