@@ -14,7 +14,11 @@ import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 interface Gen3CdkConfigStackProps extends cdk.StackProps {
   eventBusName?: string,
   eventRuleEnabled?: boolean,
-  env?: cdk.Environment
+  env?: cdk.Environment,
+  awsConfig: Config,
+  iamRolesConfig: IamRolesConfig,
+  clusterConfig: ClusterConfig,
+  environments: string[]
 }
 
 
@@ -27,50 +31,34 @@ export class Gen3CdkConfigStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: Gen3CdkConfigStackProps) {
     super(scope, id, props);
 
-    const region = props?.env?.region;
+    const region = props?.env?.region!;
+    const awsConfig = props?.awsConfig!;
+    const iamRolesConfig = props?.iamRolesConfig!;
+    const clusterConfig = props?.clusterConfig!
+    const environments = props?.environments!
     
     this.ssmClient = new SSMClient({ region });
 
     this.eventRuleEnabled = props?.eventRuleEnabled || true
 
-    const configDir = this.node.tryGetContext('configDir') || '../.secrets/config';
-
-    // Load JSON configuration
-    const jsonConfigPath = path.join(__dirname, `${configDir}/config.json`);
-    const jsonConfig = JSON.parse(fs.readFileSync(jsonConfigPath, 'utf-8')) as Config;
-
-    const overwriteConfig = this.node.tryGetContext('update')?.includes('config') || false;
+    const updateConfig = this.node.tryGetContext('update')?.includes('config') || false;
 
     const configParameterName = '/gen3/config';
 
-    this.handleSsmParameter(configParameterName, JSON.stringify(jsonConfig), overwriteConfig, 'config', '');
+    this.handleSsmParameter(configParameterName, JSON.stringify(awsConfig), updateConfig, 'config', '');
 
-    // Load IAM roles configuration
-    const yamlConfigPath = path.join(__dirname, `${configDir}/iamRolesConfig.yaml`);
-    const rolesConfig = yaml.parse(fs.readFileSync(yamlConfigPath, 'utf-8')) as IamRolesConfig;
+    const updateRoles = this.node.tryGetContext('update')?.includes('roles') || false;
 
-    let environments: string[];
-    try {
-      environments = this.node.tryGetContext('environments').split(',');
-    } catch (error) {
-      console.error("**** Caught a TypeError: Did you provide environments? ****");
-      throw error;
-    }
-
-    const overwriteRoles = this.node.tryGetContext('update')?.includes('roles') || false;
     environments.forEach(env => {
       const parameterName = `/gen3/${env}/iamRolesConfig`;
-      this.handleSsmParameter(parameterName, JSON.stringify(rolesConfig.services[env]), overwriteRoles, 'iamRoles', env);
+      this.handleSsmParameter(parameterName, JSON.stringify(iamRolesConfig.services[env]), updateRoles, 'iamRoles', env);
     });
 
-    // Load Cluster configuration
-    const clusterConfigPath = path.join(__dirname, `${configDir}/clusterConfig.yaml`);
-    const clusterConfig = yaml.parse(fs.readFileSync(clusterConfigPath, 'utf-8')) as ClusterConfig;
 
-    const overwriteCluster = this.node.tryGetContext('update')?.includes('cluster') || false;
+    const updateCluster = this.node.tryGetContext('update')?.includes('cluster') || false;
     environments.forEach(env => {
       const parameterName = `/gen3/${env}/cluster-config`;
-      this.handleSsmParameter(parameterName, JSON.stringify(clusterConfig.clusters[env]), overwriteCluster, 'clusterConfig', env);
+      this.handleSsmParameter(parameterName, JSON.stringify(clusterConfig.clusters[env]), updateCluster, 'clusterConfig', env);
     });
 
     // Create a custom Event Bus
@@ -82,7 +70,7 @@ export class Gen3CdkConfigStack extends cdk.Stack {
     environments.forEach(envName => {
       let env: AwsConfig;
       try {
-        env = jsonConfig[envName].aws;
+        env = awsConfig[envName].aws;
       } catch (error) {
         console.error(`Caught a TypeError: Environment: ${envName}`);
         throw error;
@@ -109,18 +97,18 @@ export class Gen3CdkConfigStack extends cdk.Stack {
     }
   }
 
-  private async handleSsmParameter(parameterName: string, value: string, overwrite: boolean, type: string, env: string) {
+  private async handleSsmParameter(parameterName: string, value: string, update: boolean, type: string, env: string) {
     const parameterExists = await this.parameterExists(parameterName);
-    if (!parameterExists || overwrite) {
-      this.updateSsmParameter(parameterName, value, overwrite, type, env);
+    if (!parameterExists || update) {
+      this.updateSsmParameter(parameterName, value, update, type, env);
     } else {
       console.log(`Skipping ${type} parameter deployment for ${parameterName}`);
     }
   }
   
-  private updateSsmParameter(parameterName: string, value: string, overwrite: boolean, type: string, env: string) {
+  private updateSsmParameter(parameterName: string, value: string, update: boolean, type: string, env: string) {
     const ssmConstructId = `${type}SSM${parameterName}${env}`;
-    console.log(`${overwrite ? 'Updating' : 'Creating'} SSM Parameter: ${parameterName} with value: ${value}`);
+    console.log(`${update ? 'Updating' : 'Creating'} SSM Parameter: ${parameterName} with value: ${value}`);
 
     new AwsCustomResource(this, ssmConstructId, {
       onUpdate: {
@@ -130,7 +118,7 @@ export class Gen3CdkConfigStack extends cdk.Stack {
           Name: parameterName,
           Value: value,
           Type: 'String',
-          Overwrite: overwrite,
+          Overwrite: update,
         },
         physicalResourceId: cr.PhysicalResourceId.of(parameterName),
       },

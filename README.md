@@ -1,6 +1,6 @@
 # Gen3 CDK Configuration Stack
 
-This project is designed to configure and manage Gen3 EKS environments using AWS CDK. The stack is deployed in a **dedicated tools/management account** and handles the creation and management of SSM Parameter Stores for multiple Gen3 environments. These environments include configurations for IAM roles, EKS clusters, and other infrastructure settings.
+This project is designed to configure and manage Gen3 EKS environments using AWS CDK. The stack is deployed in a **dedicated tools/management account** and automates the creation and management of SSM Parameter Stores for various Gen3 environments, as well as storing specific Gen3 credentials in AWS Secrets Manager. Each environment includes configurations for IAM roles, EKS clusters, and other infrastructure settings.
 
 Please note: This project is designed for [**GEN3 EKS Blueprint Codepipeline**](https://github.com/AustralianBioCommons/gen3-eks-pipeline) to consume these configurations.
 
@@ -91,6 +91,13 @@ Holds AWS infrastructure configuration like:
 -   Account information
 -   Platform roles
 
+## AWS Secrets Manager
+### **ArgoCD initial credentials** (`argocdAdmin-{env}`)
+Creates an ArgoCD admin password, which can be used for the initial login to configure new users if Single Sign-On (SSO) is not being used. This admin account must be disabled after user setup. For more information, refer to the [ArgoCD documentation](https://argo-cd.readthedocs.io/en/stable/operator-manual/user-management/).
+
+### **Fence Config** (`fence-config-{env}`)
+`WIP`
+
 Configuration Files
 -------------------
 
@@ -124,11 +131,11 @@ Usage
 
 -   **Compare changes (diff)**:
 
-            cdk diff --context environments=uat,staging,prod --context update=roles,config,cluster --context configDir=/user/documents/config
+            cdk diff --all --context environments=uat,staging,prod --context update=roles,config,cluster --context configDir=/user/documents/config
 
 -   **Deploy stacks**:
 
-            cdk deploy --context environments=uat,staging,prod --context update=roles,config,cluster
+            cdk deploy --all --context environments=uat,staging,prod --context update=roles,config,cluster
 
 #### Parameters
 
